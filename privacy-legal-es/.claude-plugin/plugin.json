@@ -1,0 +1,7 @@
+{
+  "name": "privacy-legal-es",
+  "version": "0.1.0",
+  "description": "Plugin de privacidad y protección de datos para el ordenamiento jurídico español. RGPD + LOPDGDD + AEPD. Desarrollado por Demalia.",
+  "author": "Demalia <hector@demaliaconsulting.com>",
+  "license": "Apache-2.0"
+}
