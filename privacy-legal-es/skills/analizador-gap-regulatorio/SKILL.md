@@ -1,184 +1,228 @@
 ---
-name: reg-gap-analysis
+name: analizador-gap-regulatorio
 description: >
-  Diff a new or changed regulation against current privacy policy and practice —
-  outputs a gap list and a remediation plan with owners and dates. Use when a new
-  reg drops, the user asks "does [regulation] affect us", "gap analysis for
-  [state privacy law]", "compliance check against [reg]", or pastes regulatory text.
-argument-hint: "[regulation name, or paste reg text/summary]"
+  Compara una nueva norma, resolución, guía o criterio de la AEPD contra el
+  estado actual de las políticas y procedimientos del despacho o del cliente,
+  e identifica las brechas (gaps) existentes. Genera un plan de remediación
+  con propietario, plazo propuesto y prioridad según el riesgo sancionador.
+  Úsalo cuando el usuario diga "ha salido una nueva norma de protección de
+  datos", "la AEPD ha publicado una guía nueva", "me afecta el nuevo
+  reglamento X", "necesito saber qué tengo que cambiar", "quiero hacer un
+  gap analysis de privacidad", o "¿cómo nos afecta esta resolución?".
+argument-hint: "[pega o describe la nueva norma/guía/resolución + describe tu situación actual]"
 ---
 
-# /reg-gap-analysis
+# /analizador-gap-regulatorio
 
-1. Load `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` → privacy policy commitments, regulatory footprint, DSAR systems.
-2. Run the workflow below.
-3. Scope: does the regulation apply? (jurisdiction, thresholds, sector)
-4. Extract requirements → diff against current state → gap list.
-5. Remediation plan with owners, dates, prioritization.
-6. Save dated doc. Even "no gaps" gets documented.
-
-```
-/privacy-legal:reg-gap-analysis "Colorado Privacy Act"
-```
-
-```
-/privacy-legal:reg-gap-analysis
-[paste guidance / reg text]
-```
+1. Carga `~/.claude/plugins/config/claude-for-legal/privacy-legal-es/CLAUDE.md` →
+   extrae: rol del despacho, sectores, política de privacidad vigente,
+   procedimientos actuales, contacto de escalación.
+2. Identifica la fuente normativa (BOE, DOUE, AEPD, CEPD) y su naturaleza
+   (norma vinculante / guía interpretativa / resolución sancionadora /
+   criterio de la AEPD).
+3. Extrae los requisitos concretos que impone la nueva normativa.
+4. Compara contra el estado actual del despacho/cliente.
+5. Genera la tabla de gaps con prioridad y plan de remediación.
+6. Todos los outputs son borradores para revisión letrada.
+/privacy-legal-es:analizador-gap-regulatorio
+[pega la nueva norma o descríbela + describe tu situación actual]
 
 ---
 
-# Regulation-to-Policy Gap Analysis
+# Análisis de Brechas Regulatorias — Privacidad y Protección de Datos
 
-## Purpose
+## Contexto de práctica
 
-A state passes a new privacy law. The ICO issues new guidance. The CPPA finalizes regulations. Something moves — and now you need to know what, if anything, you have to change.
+Lee `~/.claude/plugins/config/claude-for-legal/privacy-legal-es/CLAUDE.md`.
+Si no existe el perfil, aplica análisis genérico y etiqueta como
+`[PERFIL NO CONFIGURADO]`.
 
-This skill diffs the new requirement against what you currently do (per `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` → Privacy policy commitments + the practices documented in PIAs) and produces a gap list with a remediation plan.
+**Fuentes normativas aplicables — España:**
+- BOE: legislación española [FUENTE: BOE]
+- DOUE: legislación y directrices de la UE [FUENTE: RGPD]
+- AEPD: guías, resoluciones, criterios interpretativos [FUENTE: AEPD]
+- CEPD: directrices del Comité Europeo de Protección de Datos [VERIFICAR]
+- CENDOJ: jurisprudencia de tribunales españoles [señal manual — ver TODO.md]
 
-## Load current state
+**NO son fuentes aplicables:** FTC, state attorneys general, CCPA, HIPAA,
+ni ninguna normativa estadounidense o de terceros países salvo que
+expresamente sean normas de países adecuados reconocidos por la Comisión
+Europea.
 
-Read `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md`:
-- `## Privacy policy commitments` — what you've publicly promised
-- `## Regulatory footprint` — what already applies
-- `## DSAR process` → systems list — what you actually do operationally
+---
 
-If the regulation doesn't apply to you (wrong jurisdiction, below threshold, different sector), the gap analysis is one line: "Doesn't apply. Here's why: [reason]. No action needed."
+## PASO 1 — Identificación y clasificación de la fuente normativa
 
-## Workflow
+**Determina:**
 
-### Step 1: Scope the regulation
+| Campo | Valor |
+|---|---|
+| Nombre de la norma/guía/resolución | [extraer] |
+| Tipo | Reglamento / Directiva / Ley / Guía AEPD / Resolución sancionadora / Criterio CEPD |
+| Naturaleza | Vinculante / Interpretativa / Orientativa |
+| Fecha de publicación | DD/MM/AAAA |
+| Fecha de aplicación / entrada en vigor | DD/MM/AAAA |
+| Referencia oficial | [BOE-X / DOUE L-X / Expediente AEPD X] |
+| Ámbito de aplicación | ¿A quién aplica? ¿Qué sectores? ¿Qué tipos de tratamiento? |
+| Tiempo hasta cumplimiento obligatorio | [días/meses desde hoy] |
 
-Before diffing, answer:
+**Distinción crítica:**
+- **Norma vinculante** (Reglamento UE, Ley, RD): cumplimiento obligatorio
+  en la fecha de aplicación. Incumplimiento → sanción directa.
+- **Guía AEPD**: interpretación de la autoridad de control. No es norma,
+  pero marca el estándar que la AEPD aplicará en sus inspecciones y
+  resoluciones. Ignorarla es un riesgo regulatorio real. [FUENTE: AEPD]
+- **Resolución sancionadora**: precedente. Indica qué conductas ya ha
+  sancionado la AEPD y con qué criterio. No crea obligación directa pero
+  sí jurisprudencia administrativa.
 
-- **Does it apply?** Jurisdiction (do you have data subjects there?), threshold (revenue, user count, data volume), sector carve-outs
-- **When?** Effective date, enforcement date (often later), any phase-in
-- **What's actually new?** Many "new" state privacy laws are 90% CCPA with tweaks. Identify the delta from what you already comply with, not the full text.
+---
 
-### Step 2: Extract requirements
+## PASO 2 — Extracción de requisitos
 
-Read the regulation (or summary/guidance). List every substantive requirement as a discrete item:
+Extrae los requisitos concretos que impone la norma. Para cada requisito:
 
-| # | Requirement | Citation | Category |
-|---|---|---|---|
-| 1 | [requirement as stated] | [section] | [Notice / Rights / Security / Vendor / Other] |
-
-**Categories:**
-- **Notice** — what you have to tell users (privacy policy content)
-- **Rights** — what users can ask for (DSAR-adjacent)
-- **Security** — technical/organizational measures
-- **Vendor** — what you have to flow down to processors
-- **Consent** — opt-in/opt-out mechanics
-- **Governance** — DPO, impact assessments, record-keeping
-
-### Step 3: Diff against current state
-
-For each requirement:
-
-```markdown
-### [Requirement #N]: [short name]
-
-**Regulation says:** [requirement, quoted or paraphrased]
-
-**We currently:** [what the config CLAUDE.md / privacy policy / practice shows]
-
-**Gap:** [None | Partial | Full]
-
-**If partial/full gap — what's missing:** [specific]
-
-**Effort to close:** [Policy update only | Product change | Vendor renegotiation |
-New process]
-
-**Risk of non-compliance:** [regulatory penalty range, enforcement likelihood,
-reputational]
-```
-
-### Step 4: Prioritize
-
-Not every gap is equal. Sort by:
-
-1. **Hard deadline with teeth** — effective date + active enforcement + real penalties
-2. **Effort-to-impact ratio** — policy language update is cheap; product rebuild is not
-3. **What you've already half-done** — if you're 80% there for GDPR, the state law delta may be small
-
-### Step 5: Remediation plan
-
-Prepend the work-product header from `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` `## Outputs` (it differs by user role — see `## Who's using this`).
-
-> **Research-connector pre-flight.** Before emitting the remediation plan, check whether a legal research connector is reachable for this session — Westlaw, an EUR-Lex / regulator-site connector, or any firm-configured research MCP. Collect this into the reviewer note per CLAUDE.md `## Outputs`: if no connector returns results in Step 2 or the Common regulation categories research step (or none is configured at run time), record it in the **Sources:** line of the reviewer note — e.g., `not connected — cites from training knowledge; the highest-fabrication items in privacy gap analyses are new state-law effective dates, enforcement-begins dates, and article/section pinpoints — spot-check those first`. Per-citation `[model knowledge — verify]` tags remain inline. Do not emit a standalone banner above the output.
-
-```markdown
-[WORK-PRODUCT HEADER — per plugin config ## Outputs]
-
-## Remediation Plan: [Regulation name]
-
-**Effective date:** [date]
-**Enforcement begins:** [date]
-
-### Must-do before enforcement
-
-| Gap | Fix | Owner | Due | Status |
+| # | Requisito | Artículo/Sección | Tipo | Plazo |
 |---|---|---|---|---|
-| [gap] | [specific fix] | [name] | [date] | [ ] |
+| R1 | [descripción concreta del requisito] | [referencia] | Obligatorio/Recomendado | [plazo] |
+| R2 | | | | |
 
-### Should-do (lower risk, not blocking)
+**Categorías de requisitos a buscar:**
+- Nuevas obligaciones de información a interesados
+- Nuevos consentimientos o cambios en la base jurídica
+- Nuevos registros o documentación obligatoria
+- Cambios en plazos (conservación, respuesta, notificación)
+- Nuevas medidas de seguridad técnicas u organizativas
+- Nuevas EIPDs obligatorias o ampliación de los supuestos
+- Obligaciones de designar DPD o ampliar sus funciones
+- Restricciones o prohibiciones de nuevos tratamientos
+- Obligaciones de notificación a la AEPD
+- Cambios en el régimen de encargados o subencargados
+- Nuevos derechos de los interesados
 
-[same table]
+---
 
-### Already compliant
+## PASO 3 — Estado actual del despacho/cliente
 
-[list of requirements where gap = None — useful for the "we're mostly fine" message]
+Recopila el estado actual contra el que comparar. Extrae del CLAUDE.md
+o pregunta al usuario:
 
-### Accepted gaps (risk-accepted, not fixing)
+| Área | Estado actual | Fuente |
+|---|---|---|
+| Política de privacidad | [URL / fecha última actualización] | CLAUDE.md / usuario |
+| Registro de actividades | [Existe / No existe / Desactualizado] | usuario |
+| Procedimiento ARSULIPO | [Existe / No / Parcial] | usuario |
+| Contratos de encargado | [Todos firmados / Algunos / Ninguno] | usuario |
+| Medidas de seguridad | [Descripción] | usuario |
+| EIPD realizadas | [Cuáles / Ninguna] | usuario |
+| DPD designado | [Sí / No / No obligatorio] | usuario |
+| Formación del personal | [Cuándo / Nunca] | usuario |
 
-[if any — with documented rationale and who accepted the risk]
-```
+---
 
-## Common regulation categories
+## PASO 4 — Tabla de gaps
 
-When scoping the delta, it helps to place the new regulation into a rough category and then research the specifics:
+Para cada requisito de la norma, compara con el estado actual y
+determina si existe brecha:
+ANÁLISIS DE BRECHAS — [NOMBRE DE LA NORMA]
+Responsable/Cliente: [COMPLETAR]
+Fecha del análisis:  DD/MM/AAAA
+[PERFIL NO CONFIGURADO si aplica]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- **Baseline data-protection / privacy law** — broad coverage of a jurisdiction's personal data practices
-- **Sector-specific overlay** — health, finance, children, education, employment, etc.
-- **AI-specific regime** — transparency, impact assessments, or governance for automated decision-making
-- **Data broker / ad-tech regime** — registration, opt-out, deletion mechanisms
-- **Breach-notification regime** — standalone or embedded in a broader law
-- **Cross-border transfer regime** — adequacy, mechanism, and assessment requirements
+| # | Requisito | Estado actual | Gap | Prioridad | Riesgo sancionador |
+|---|---|---|---|---|---|
+| R1 | [requisito] | [estado] | ✅ Cumplido / ⚠️ Parcial / ❌ Incumplido | Alta/Media/Baja | Art. 83.X RGPD — hasta [X]M€ / N/A |
+| R2 | | | | | |
 
-For each category relevant to the new regulation, **research the currently operative requirements** before drafting the gap analysis. Cite primary sources. Verify currency — new state laws come online each legislative session, and regulators issue interpretive guidance that shifts what "compliance" means for a given control. Flag uncertainty for attorney verification rather than assert a rule you haven't confirmed.
+**Criterios de prioridad:**
 
-> **No silent supplement.** If a research query to the configured legal research tool (Westlaw, regulator databases, or firm platform) returns few or no results for a regulation, guidance document, or enforcement action, report what was found and stop. Do NOT fill the gap from web search or model knowledge without asking. Say: "The search returned [N] results from [tool]. Coverage appears thin for [regime / topic]. Options: (1) broaden the search query, (2) try a different research tool, (3) search the web — results will be tagged `[web search — verify]` and should be checked against the issuing authority before relying, or (4) flag as unverified and stop. Which would you like?" A lawyer decides whether to accept lower-confidence sources.
->
-> **Source attribution tiering.** Tag every citation in the gap analysis with its source. For model-knowledge citations, use one of three tiers rather than a single blanket "verify" tag:
->
-> - `[settled]` — stable, well-known statutory and regulatory references unlikely to have changed (e.g., GDPR Art. 33, CCPA § 1798.100, FTC Act § 5). Still verify before filing, but lower priority.
-> - `[verify]` — model-knowledge citations that are real but should be verified: specific implementing regulations, agency guidance, case holdings, thresholds, effective dates, newly enacted state statutes.
-> - `[verify-pinpoint]` — pinpoint citations (specific subsection letters, volume/page numbers, paragraph numbers, regulatory subpart references) carry the highest fabrication risk and should ALWAYS be verified against a primary source.
->
-> Tool-retrieved citations keep their source tag (`[Westlaw]`, `[issuing authority site]`, or the MCP tool name); web-search citations remain `[web search — verify]`; user-supplied citations remain `[user provided]`. The tiering surfaces the real verification work — a reader who verifies everything verifies nothing. Never strip or collapse the tags.
+| Prioridad | Criterio |
+|---|---|
+| **CRÍTICA** | Incumplimiento ya sancionable + plazo vencido o inminente (<30 días) |
+| **ALTA** | Incumplimiento sancionable con plazo 30-90 días / categorías especiales afectadas |
+| **MEDIA** | Incumplimiento sancionable con plazo >90 días / sin categorías especiales |
+| **BAJA** | Recomendación / buena práctica / guía no vinculante |
 
-## Integration with other skills
+**Escala sancionadora RGPD para contextualizar:** [FUENTE: RGPD]
+- Infracciones graves (Art. 83.5): hasta 20.000.000€ o 4% facturación
+  global anual (la mayor)
+- Infracciones menos graves (Art. 83.4): hasta 10.000.000€ o 2%
+  facturación global anual (la mayor)
+- Infracciones LOPDGDD (Arts. 72-74): muy graves / graves / leves
+  [FUENTE: BOE]
 
-**From PIA generation:** PIAs flag privacy policy inconsistencies → those feed here as known gaps.
+---
 
-**To the regulatory-legal plugin (if installed):** This skill is the manual version. The monitor plugin watches feeds and triggers this analysis automatically when something changes.
+## PASO 5 — Plan de remediación
 
-## Output
+Para cada gap identificado, genera la ficha de remediación:
+GAP [N] — [Título]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Requisito:        [descripción]
+Referencia legal: [Art. X norma Y]
+Estado actual:    [descripción del gap]
+Prioridad:        [CRÍTICA / ALTA / MEDIA / BAJA]
+Riesgo:           [Art. 83.X RGPD — hasta X€ / orientativo]
+Acción requerida: [descripción concreta de qué hay que hacer]
+Propietario:      [rol — DPD / Letrado responsable / IT / RRHH]
+Plazo propuesto:  DD/MM/AAAA
+Dependencias:     [otras acciones que deben completarse antes]
+Estado:           [ ] Pendiente  [ ] En curso  [ ] Completado
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-Save as a dated markdown doc. The remediation plan table becomes a tracker — update status as items close.
+---
 
-If the gap analysis concludes "no gaps, we're compliant," still write the doc — it's useful evidence later that you looked.
+## PASO 6 — Resumen ejecutivo
 
-**Close with a citation-verification note:**
+Genera el resumen para presentar a la dirección o al cliente:
+RESUMEN EJECUTIVO — GAP ANALYSIS
+[NOMBRE DE LA NORMA]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Fecha del análisis:        DD/MM/AAAA
+Fecha límite cumplimiento: DD/MM/AAAA
+Tiempo disponible:         [X días/meses]
+GAPS IDENTIFICADOS:        [N] total
+Prioridad CRÍTICA:       [N]
+Prioridad ALTA:          [N]
+Prioridad MEDIA:         [N]
+Prioridad BAJA:          [N]
+ÁREAS MÁS AFECTADAS:
 
-> Citations in this output were generated by an AI model and have not been verified against a primary source. Before relying on any regulation, statute, guidance, or enforcement action, check it against a legal research tool (Westlaw, your firm's research platform, or the issuing authority's website) for accuracy and current status. AI-generated citations are sometimes fabricated or misquoted. Source tags on each citation (e.g., `[web search — verify]`) show where it came from; `verify` tags carry higher fabrication risk and should be checked first.
+[área]
+[área]
+[área]
 
-## Close with the next-steps decision tree
+ACCIONES INMEDIATAS (antes de [fecha]):
 
-End with the next-steps decision tree per CLAUDE.md `## Outputs`. Customize the options to what this skill just produced — the five default branches (draft the X, escalate, get more facts, watch and wait, something else) are a starting point, not a lock-in. The tree is the output; the lawyer picks.
+[acción] — Propietario: [rol]
+[acción] — Propietario: [rol]
 
-## What this skill does not do
+EXPOSICIÓN REGULATORIA SIN REMEDIACIÓN:
+[descripción del riesgo sancionador concreto]
+COSTE ESTIMADO DE REMEDIACIÓN:
+[Alto / Medio / Bajo — descripción cualitativa]
+[Si el despacho tiene CLAUDE.md configurado con presupuesto: cifra]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  Borrador para revisión letrada antes de presentar
+o compartir con el cliente.
 
-- It doesn't interpret ambiguous regulatory language authoritatively. When the reg is unclear, say so: "Section X could be read as [A] or [B]. [A] is the conservative read. Suggest outside counsel if this is material."
-- It doesn't track regulatory changes proactively. It runs when you point it at a change. For proactive monitoring, see the regulatory-legal plugin.
-- It doesn't implement fixes. It plans them.
+---
+
+## Guardrails obligatorios
+
+- **Distinguir siempre entre norma vinculante y guía interpretativa** —
+  el nivel de urgencia y el riesgo sancionador son diferentes.
+- **Nunca minimizar el riesgo sancionador** — si hay incumplimiento
+  de norma vinculante, indicar el artículo sancionador y el rango
+  de la multa, aunque sea orientativo. [FUENTE: RGPD]
+- **En caso de brecha CRÍTICA con plazo vencido: ESCALA** — revisión
+  letrada urgente antes de cualquier otro paso.
+- **Citar siempre la fuente** con [FUENTE: BOE], [FUENTE: AEPD],
+  [FUENTE: RGPD], [VERIFICAR] cuando no hay fuente verificable.
+- **CENDOJ:** las resoluciones de tribunales españoles son señal
+  para búsqueda manual por el letrado — no citar jurisprudencia
+  sin verificación. [VERIFICAR — búsqueda manual CENDOJ]
+- Todos los outputs son borradores para revisión letrada.
+- No usar normativa estadounidense como referencia bajo ningún
+  concepto.
