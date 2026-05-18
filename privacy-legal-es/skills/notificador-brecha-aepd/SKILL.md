@@ -1,288 +1,329 @@
 ---
-name: dsar-response
+name: notificador-brecha-aepd
 description: >
-  Walk through a Data Subject Access Request (or deletion, portability, correction
-  request) and draft the response — verify identity, locate data system-by-system,
-  assess exemptions, draft the acknowledgment and substantive response letters.
-  Use when a DSAR comes in, the user pastes an access/deletion/portability/correction
-  request, or says "DSAR came in", "access request", "right to be forgotten", or
-  "someone wants their data".
-argument-hint: "[paste the request, or describe it]"
+  Analiza un incidente de seguridad que afecte a datos personales, determina si existe
+  obligación de notificar a la AEPD en el plazo de 72 horas (Art. 33 RGPD) y/o a los
+  interesados afectados (Art. 34 RGPD), y genera el borrador del formulario de
+  notificación a la AEPD y la comunicación a interesados si procede.
+  Úsalo cuando el usuario describa un incidente de seguridad, un acceso no autorizado
+  a datos, una pérdida de dispositivo con datos personales, un ransomware, un envío
+  masivo erróneo de emails, una filtración de datos, o cualquier situación donde
+  puedan haberse visto comprometidos datos personales.
+  CRÍTICO: el plazo de 72 horas empieza a contar desde que el responsable tiene
+  conocimiento del incidente. Ejecutar este skill sin demora.
+argument-hint: "[describe el incidente — qué ocurrió, cuándo, qué datos y cuántas personas afectadas]"
 ---
 
-# /dsar-response
+# /notificador-brecha-aepd
 
-1. Load `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` → DSAR process (systems list, verification method, SLA).
-2. Run the workflow below.
-3. Classify request type. Check escalation triggers — if any fire, route before proceeding.
-4. Walk through: verify identity → walk systems list → exemption analysis → draft.
-5. Output response draft. Do NOT send — human reviews and sends.
-6. Log the DSAR per house process.
+1. Carga `~/.claude/plugins/config/claude-for-legal/privacy-legal-es/CLAUDE.md` →
+   extrae: rol del despacho, contacto de escalación urgente (teléfono), sistemas
+   de datos, encargados del tratamiento.
+2. Registra el timestamp de inicio del análisis — el plazo de 72h corre desde
+   el momento en que el responsable tuvo conocimiento, no desde ahora.
+3. Pregunta la fecha y hora exacta en que el despacho tuvo conocimiento del
+   incidente si no consta en la descripción.
+4. Ejecuta el flujo de análisis paso a paso.
+5. Output: análisis de notificación + formulario AEPD borrador + comunicación
+   a interesados si Art. 34 aplica.
+6. NUNCA enviar directamente — revisión letrada obligatoria. Pero advierte
+   activamente del tiempo restante para el plazo de 72h.
 
-**Before pasting the request:** the request will contain the data subject's PII. Confirm your session and output storage meet your data-handling requirements. Redact anything you don't need (ID attachments, unrelated email threads). Do not store the subject's name in filenames.
-
-```
-/privacy-legal:dsar-response
-[paste the request email]
-```
-
----
-
-# DSAR Response Drafting
-
-## Matter context
-
-**Matter context.** Check `## Matter workspaces` in the practice-level CLAUDE.md. If `Enabled` is `✗` (the default for in-house users), skip the rest of this paragraph — skills use practice-level context and the matter machinery is invisible. If enabled and there is no active matter, ask: "Which matter is this for? Run `/privacy-legal:matter-workspace switch <slug>` or say `practice-level`." Load the active matter's `matter.md` for matter-specific context and overrides. Write outputs to the matter folder at `~/.claude/plugins/config/claude-for-legal/privacy-legal/matters/<matter-slug>/`. Never read another matter's files unless `Cross-matter context` is `on`.
+**URGENCIA:** si el tiempo transcurrido desde el conocimiento del incidente
+se acerca o supera las 48 horas, indicarlo en rojo al inicio del output.
+Las notificaciones extemporáneas a la AEPD deben incluir justificación
+de la demora.
+/privacy-legal-es:notificador-brecha-aepd
+[describe el incidente]
 
 ---
 
-## Purpose
+# Notificación de Brechas de Seguridad — Art. 33-34 RGPD
 
-A DSAR has a deadline (set by the applicable regime), a process (verify, locate, assess exemptions, respond), and a bunch of places it can go wrong. This skill walks through each step and drafts the response.
+## Contexto de práctica
 
-## Jurisdiction assumption
+Lee `~/.claude/plugins/config/claude-for-legal/privacy-legal-es/CLAUDE.md`.
+Si no existe, aplica valores por defecto RGPD y etiqueta todo output como
+`[PERFIL NO CONFIGURADO]`. Recomienda ejecutar
+`/privacy-legal-es:cold-start-interview-es` antes de usar en producción.
 
-This analysis assumes the jurisdictional scope specified in your configuration. Privacy rules, response deadlines, and lawful bases vary materially by jurisdiction (GDPR vs. state consumer privacy laws vs. sectoral). If the data subject, processing activity, or controller is in a different jurisdiction than configured, this analysis may not apply as written.
+---
 
-## Load the process
+## Finalidad del skill
 
-Read `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` → `## DSAR process`. That section has:
-- The systems list (every place user data lives)
-- Identity verification method
-- Response SLA
-- Who handles routine vs. who gets escalated
+Una brecha de seguridad que afecte a datos personales puede generar dos
+obligaciones simultáneas con plazos distintos y consecuencias sancionadoras
+graves si se incumplen. Este skill determina qué obligaciones aplican,
+cuándo vencen y genera los documentos necesarios.
 
-If the systems list is empty or stale, flag it — can't do a complete DSAR without knowing where to look.
+**Marco jurisdiccional:** España. RGPD (UE) 2016/679 + LOPDGDD (LO 3/2018).
+Autoridad de control competente: AEPD.
 
-## Workflow
+---
 
-### Step 1: Classify the request
+## PASO 1 — Control de tiempo
 
-Identify which right the data subject is invoking. Common categories:
+Calcula y muestra de forma prominente:
+⏱ CONTROL DE PLAZO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Conocimiento del incidente: [DD/MM/AAAA HH:MM]
+Momento del análisis:       [DD/MM/AAAA HH:MM]
+Tiempo transcurrido:        [X horas]
+Tiempo restante (72h):      [Y horas]
+Vencimiento plazo AEPD:     [DD/MM/AAAA HH:MM]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-- **Access** — copy of their data + information about processing
-- **Deletion / erasure** — remove their data (subject to exemptions)
-- **Portability** — their data in machine-readable format
-- **Correction / rectification** — fix inaccurate data
-- **Objection** — stop a particular processing (often marketing)
-- **Restriction** — pause processing pending a dispute
-- **Opt-out of sale/share / automated decision-making** — regime-specific rights
+**Si tiempo transcurrido > 48h:** mostrar aviso destacado —
+"⚠️ ATENCIÓN: quedan menos de 24 horas para el vencimiento del plazo de
+notificación a la AEPD. La notificación extemporánea requiere justificación
+de la demora en el propio formulario."
 
-**Research the applicable rule before proceeding.** For each invoked right, identify the jurisdiction(s) whose law applies (GDPR, UK GDPR, CCPA/CPRA, other US state privacy laws, sectoral regimes). Cite the controlling statute or regulation with pinpoint references — the specific article/section, the scope of the right, any carve-outs. Note effective dates; data subject rights are amended frequently (new state laws each legislative session). Flag uncertainty and escalate for attorney verification rather than stating a rule you haven't confirmed.
+**Si tiempo transcurrido > 72h:** mostrar aviso crítico —
+"🔴 PLAZO VENCIDO: el plazo de 72h ha expirado. La notificación debe
+realizarse igualmente, incluyendo en el campo de observaciones la
+justificación de la demora. [FUENTE: AEPD] Una notificación tardía
+justificada es preferible a no notificar."
 
-> **No silent supplement.** If a research query to the configured legal research tool returns few or no results for the jurisdiction's rights, exemptions, or deadlines, report what was found and stop. Do NOT fill the gap from web search or model knowledge without asking. Say: "The search returned [N] results from [tool]. Coverage appears thin for [regime / right]. Options: (1) broaden the search query, (2) try a different research tool, (3) search the web — results will be tagged `[web search — verify]` and should be checked against a primary source before relying, or (4) flag as unverified and stop. Which would you like?" A lawyer decides whether to accept lower-confidence sources.
->
-> **Source attribution tiering.** Tag every citation with its source. For model-knowledge citations, use one of three tiers rather than a single blanket "verify" tag:
->
-> - `[settled]` — stable, well-known statutory and regulatory references unlikely to have changed (e.g., GDPR Art. 33, CCPA § 1798.100, FTC Act § 5, 45-day CCPA response window under § 1798.130(a)(2) as a concept). Still verify before filing, but lower priority.
-> - `[verify]` — model-knowledge citations that are real but should be verified: specific implementing regulations, agency guidance, case holdings, thresholds, effective dates, post-2023 amendments.
-> - `[verify-pinpoint]` — pinpoint citations (specific subsection letters, volume/page numbers, paragraph numbers, regulatory subpart references) carry the highest fabrication risk and should ALWAYS be verified against a primary source.
->
-> Tool-retrieved citations keep their source tag (`[Westlaw]`, `[issuing authority site]`, or the MCP tool name); web-search citations remain `[web search — verify]`; user-supplied citations remain `[user provided]`. The tiering surfaces the real verification work — a reader who verifies everything verifies nothing. Never strip or collapse the tags.
+---
 
-Some requests are combinations — "delete my account and send me my data first" is deletion + portability. Handle as two linked requests.
+## PASO 2 — Clasificación de la brecha
 
-### Step 2: Verify identity
+Determina el tipo o tipos de brecha concurrentes:
 
-Per the method in `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md`. Common approaches:
-
-- **Logged-in verification:** Request came from within an authenticated session → identity confirmed
-- **Email match:** Request came from an email on file → usually sufficient for low-risk requests
-- **Additional verification:** For high-value accounts or deletion requests → challenge question, phone verification, ID document
-
-**Calibrate to risk.** Over-verifying turns the DSAR process into a barrier (bad look with regulators). Under-verifying risks handing someone else's data to a fraudster.
-
-If identity can't be verified:
-
-```markdown
-We were unable to verify that this request came from the individual whose data
-is at issue. To proceed, please [verification step]. We cannot provide personal
-data in response to a request we cannot verify.
-```
-
-This pauses the clock (arguably) but don't sit on it — respond to say you need verification within a few days, not on day 29.
-
-### Step 3: Locate the data
-
-Walk the systems list from `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md`. For each system:
-
-| System | Queried? | Data found? | What |
-|---|---|---|---|
-| Production database | | | |
-| Analytics (e.g., Mixpanel, Amplitude) | | | |
-| Support tickets (e.g., Zendesk) | | | |
-| CRM (e.g., Salesforce, HubSpot) | | | |
-| Email marketing (e.g., Marketo) | | | |
-| Logs | | | |
-| Backups | | | (note: usually exempt from deletion — see below) |
-| Third-party processors | | | (they may need to be notified for deletion) |
-
-For a B2B processor: the "data subject" is usually *your customer's* end user. Check whether this is actually your customer's DSAR to handle, not yours. Many processor DPAs say "forward DSARs to the controller."
-
-### Step 4: Exemption analysis
-
-Not everything gets produced or deleted. **Research the applicable rule before proceeding.** For each item, identify every exemption that plausibly applies under the regime in scope (e.g., third-party privacy, privilege, trade secret, security, legal obligation to retain, establishment/defense of legal claims, transactional necessity, backup rotation accommodations, freedom of expression). Cite the controlling statute, regulation, or case with a pinpoint cite. Exemption scope varies by jurisdiction and regime — verify currency and flag uncertainty.
-
-**Don't narrow the list on a subjective call.** The skill proposes exemptions where a good-faith basis exists and flags the uncertain ones; the attorney narrows the list before the response goes out. Dropping an exemption that later turns out to apply is costly — once material is disclosed, the exemption is functionally gone. Over-asserting a plausible exemption is correctable by the attorney in review. Prefer the recoverable error.
-
-Every proposed exemption carries an explicit note: **"proposed — requires attorney review before asserting. Regulators scrutinize blanket exemption claims, so the attorney narrows this list; the skill does not."**
-
-Common recurring questions to work through:
-
-- Does the record contain data about *other* people that needs to be redacted before production?
-- Is there a specific legal retention obligation that blocks deletion? Cite it.
-- Is there an active litigation hold covering this individual's data?
-- Are there backup rotation or technical-feasibility accommodations that need to be documented (not used as a general excuse)?
-
-**Document every exemption claimed.** If a regulator asks why you didn't delete something, "we had a legal obligation" needs a citation.
-
-### Step 5: Draft the response — TWO LETTERS
-
-> **Research-connector pre-flight.** Before emitting either letter or the internal exemption analysis, check whether a legal research connector is reachable for this session — Westlaw, an EUR-Lex / regulator-site connector, or any firm-configured research MCP. Collect this into the reviewer note per CLAUDE.md `## Outputs` — the reviewer note sits on the INTERNAL exemption-analysis and cover memo, NOT on the outward-facing DSAR letters to the data subject. If no connector returns results in Step 1 (right classification), Step 4 (exemption analysis), or the Deadline management research step (or none is configured at run time), record it in the **Sources:** line of the internal reviewer note — e.g., `not connected — cites from training knowledge; claimed exemptions, response deadlines, and extension mechanisms are especially fabrication-prone, verify before asserting any exemption to a data subject or regulator`. Per-citation `[model knowledge — verify]` tags remain inline. Do not emit a standalone banner above the output.
-
-Most regimes expect (or require) a prompt acknowledgment separate from the substantive response. Produce both; do not collapse them into one letter that waits until the 45-day deadline to go out.
-
-- **Step 5a — Acknowledgment letter.** Sent within days of receipt (target: same-day to 3–5 days, always well inside the regime's statutory window). Confirms receipt, states what the controller understands the request to be, states the response clock and the target date, asks for any identity-verification material still outstanding. Does NOT contain the substantive disclosure. A prompt acknowledgment is the first regulator-visible signal that the DSAR process is working; it also reduces the risk of a duplicate request or an early complaint.
-- **Step 5b — Substantive response letter.** The actual disclosure, deletion confirmation, or portability export. Goes out by the statutory deadline (or the internal SLA if tighter). Only after identity verification is complete and the Step 3 / Step 4 data location + exemption analysis is done.
-
-**Before proceeding to send either letter to the data subject:** Read `## Who's using this` in `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md`. If the Role is Non-lawyer:
-
-> Sending a DSAR response has legal consequences — the content, the exemptions claimed, and the omissions are all reviewable by a regulator, and misstatements become enforcement exposure. Have you reviewed this with an attorney? If yes, proceed. If no, here's a brief to bring to them:
->
-> [Generate a 1-page summary: data subject, right invoked, applicable regime(s), what was located across the systems list, what is being withheld and under which exemption, identity verification posture, response deadline, and the three things to ask the attorney before the letter goes out.]
->
-> If you need to find a licensed attorney, solicitor, barrister, or other authorised legal professional in your jurisdiction: your professional regulator's referral service is the fastest starting point (state bar in the US, SRA/Bar Standards Board in England & Wales, Law Society in Scotland/NI/Ireland/Canada/Australia, or your jurisdiction's equivalent).
-
-Do not proceed past this gate without an explicit yes.
-
-> **Note:** Both DSAR letters are externally-facing deliverables sent to the data subject. Do **not** include the work-product header from `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` `## Outputs` on either letter. Internal notes, logs, and exemption analyses that accompany the letters are attorney work product — keep those separate and prepend the work-product header per `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` `## Outputs` (which differs by user role — see `## Who's using this`).
-
-> **Before sending either letter:** This is a draft for attorney review, not a response to send. Sending commits the controller to a position, may waive exemptions, and may start a regulator's clock. A licensed attorney reviews, edits, and approves before either letter goes to the data subject. Do not send unreviewed.
-
-#### Step 5a — Acknowledgment letter template
-
-```markdown
-Subject: We received your privacy request — [Company] — [date]
-
-Dear [Name],
-
-We received your [access / deletion / portability / correction] request on [date received].
-
-**Your request, as we understand it:** [one-sentence restatement — e.g., "a copy of all personal data we hold associated with your account, along with the categories of third parties with whom we share it, and deletion of your account after we provide the copy."]
-
-**What happens next:**
-- Our target date for the substantive response is [date — no later than the regime's statutory deadline; use internal SLA if tighter]. [If identity verification is outstanding: "We need [specific verification step] before we can proceed — see below."]
-- If we need more time because the request is complex or we receive other requests from you at the same time, we will tell you before the initial deadline and explain why. [If the regime allows an extension, cite the controlling provision.]
-- No fee applies to this request. [Or: the fee applies only if the regime permits it and the request is manifestly unfounded or excessive — cite the provision.]
-
-[If identity verification is outstanding:]
-**To verify your identity,** please [specific verification step — e.g., reply to this email from the address on file with the last 4 digits of the payment method we have on file]. This does not pause our deadline; we continue to work in parallel.
-
-If you have questions, contact [privacy contact].
-
-[Sender]
-```
-
-**Clock-start rule.** The response clock starts on receipt of the request, not on completion of identity verification — unless the applicable regime says otherwise. Do not tacitly toll the clock on verification. If a regime has a different trigger, cite it; do not assume.
-
-#### Step 5b — Substantive response letter templates
-
-**Access request response:**
-
-```markdown
-Subject: Your Data Access Request — [Company] — [date]
-
-We received your request on [date] for a copy of the personal data we hold about you.
-
-**What we found:**
-
-We hold the following categories of personal data associated with [identifier]:
-
-| Category | Source | Purpose | Retained until |
-|---|---|---|---|
-| [Account info: name, email] | You, at signup | Account management | Account deletion |
-| [Usage data] | Our service | Analytics, product improvement | [period] |
-| [Support correspondence] | You | Customer support | [period] |
-
-**Your data is attached** in [format]. [Secure delivery note — password-protected
-archive, secure link with expiry, etc.]
-
-**Third parties:** We share data with the following processors: [list or link to
-subprocessor page].
-
-**Your other rights:** You may also request [deletion / correction / portability].
-To do so, [method].
-
-**Data we did not include:**
-- [Category] — [exemption and reason, e.g., "internal security logs — disclosure
-  would compromise security measures"]
-- [Data about other individuals has been redacted from support correspondence]
-
-If you have questions about this response, contact [privacy contact].
-```
-
-**Deletion request response:**
-
-```markdown
-Subject: Your Deletion Request — [Company] — [date]
-
-We received your request on [date] to delete the personal data we hold about you.
-
-**What we deleted:**
-
-| Category | System | Deleted on |
+| Tipo | Descripción | Ejemplos |
 |---|---|---|
-| [Account and profile] | Production | [date] |
-| [Analytics events] | [Amplitude/etc.] | [date] |
-| [etc.] | | |
+| Confidencialidad | Acceso o divulgación no autorizados | Filtración, acceso hacker, email erróneo |
+| Integridad | Alteración no autorizada de datos | Modificación maliciosa, corrupción |
+| Disponibilidad | Destrucción o pérdida de acceso | Ransomware, borrado accidental, pérdida dispositivo |
 
-**What we retained and why:**
+Una misma brecha puede ser de los tres tipos simultáneamente.
 
-| Category | Reason | Retained until |
+**Recopila la siguiente información** (pregunta lo que no conste):
+
+1. ¿Qué ocurrió exactamente? (descripción del incidente)
+2. ¿Cuándo se produjo? ¿Cuándo se detectó? ¿Cuándo tuvo conocimiento el responsable?
+3. ¿Qué categorías de datos personales se han visto afectadas?
+   - Datos identificativos básicos (nombre, email, teléfono, dirección)
+   - Datos económicos (cuentas bancarias, tarjetas, facturas)
+   - Categorías especiales Art. 9 RGPD (salud, ideología, religión, origen racial,
+     vida sexual, datos biométricos, datos genéticos)
+   - Datos de menores
+   - Credenciales de acceso (contraseñas, tokens)
+   - Datos de localización
+4. ¿Cuántas personas afectadas aproximadamente?
+5. ¿Se han tomado medidas de contención? ¿Cuáles?
+6. ¿Hay encargados del tratamiento implicados?
+
+---
+
+## PASO 3 — Determinación de obligación de notificación a la AEPD
+
+### Regla general (Art. 33.1 RGPD)
+
+El responsable del tratamiento **debe notificar a la AEPD** salvo que sea
+improbable que la brecha suponga un riesgo para los derechos y libertades
+de las personas físicas. [FUENTE: RGPD]
+
+**La carga de la prueba de "improbabilidad de riesgo" corresponde al responsable**
+y debe documentarse. En caso de duda, notificar. [FUENTE: AEPD]
+
+### Factores de evaluación de riesgo
+
+Evalúa cada factor y determina nivel (bajo / medio / alto):
+
+| Factor | Descripción | Nivel |
 |---|---|---|
-| [Transaction records] | Legal obligation (tax record retention, [cite law]) | [date] |
-| [Backup snapshots] | Will be deleted on next rotation | [date] |
+| Naturaleza de los datos | ¿Son categorías especiales Art. 9? ¿Credenciales? ¿Datos financieros? | [evaluar] |
+| Número de afectados | A mayor número, mayor riesgo | [evaluar] |
+| Facilidad de identificación | ¿Los datos permiten identificar directamente a personas? | [evaluar] |
+| Consecuencias potenciales | Daño económico, discriminación, robo de identidad, daño reputacional | [evaluar] |
+| Perfil de los afectados | ¿Menores, personas vulnerables, empleados? | [evaluar] |
+| Medidas de seguridad previas | ¿Los datos estaban cifrados? ¿Seudonimizados? | [evaluar] |
+| Intencionalidad | ¿Ataque deliberado o accidente? | [evaluar] |
 
-**Third-party processors:** We have instructed [list] to delete your data from
-their systems.
+### Decisión
+DECISIÓN DE NOTIFICACIÓN A AEPD:
+[ ] NOTIFICAR — riesgo no descartable → plazo 72h desde conocimiento
+[ ] NO NOTIFICAR — riesgo improbable → documentar justificación
+[ ] NOTIFICAR CON DEMORA JUSTIFICADA — plazo vencido, notificar igualmente
 
-Your account is now closed. If you have questions, contact [privacy contact].
-```
+**Si la decisión es NO NOTIFICAR:** generar igualmente el registro
+interno documentado de la decisión y su justificación. El Art. 33.5 RGPD
+obliga a documentar cualquier brecha, se notifique o no. [FUENTE: RGPD]
 
-### Step 6: Log it
+---
 
-DSARs get audited. Record:
-- Date received
-- Date identity verified
-- Date responded
-- What was produced/deleted
-- Exemptions claimed and basis
-- Who handled it
+## PASO 4 — Determinación de obligación de comunicación a interesados
 
-If your team uses a DSAR tracking tool, create the record there. If not, a log file works.
+### Regla (Art. 34 RGPD)
 
-## Escalation triggers
+La comunicación a los interesados afectados es obligatoria cuando la brecha
+**entrañe probable alto riesgo** para sus derechos y libertades. [FUENTE: RGPD]
 
-Per `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` → Escalation table, escalate when:
+El umbral es más alto que para la notificación a la AEPD.
 
-- Requester is (or might be) a plaintiff, opposing counsel, or journalist
-- Request scope is unusual ("all data including internal communications about me")
-- There's a litigation hold on this individual's data (deletion request + lit hold = conflict, lawyer decides)
-- Requester is disputing a previous DSAR response
-- Any regulator is cc'd or mentioned
+### Excepciones que eliminan la obligación de comunicar (Art. 34.3 RGPD):
 
-## Deadline management
+- Los datos afectados estaban **cifrados** con estándar robusto y la clave
+  no se ha visto comprometida [FUENTE: RGPD]
+- Se han adoptado medidas posteriores que hacen improbable el alto riesgo
+- La comunicación individual supondría un esfuerzo desproporcionado →
+  en este caso: comunicación pública igualmente requerida [FUENTE: RGPD]
 
-**Two-letter rule.** Every DSAR produces an acknowledgment letter (prompt — target same-day to 3–5 days after receipt) AND a substantive response letter (by the statutory deadline). Most regimes either require or expect a prompt acknowledgment separate from the substantive response; a single combined letter sent on day 45 is a process failure even if it is substantively correct.
+### Decisión
+DECISIÓN DE COMUNICACIÓN A INTERESADOS:
+[ ] COMUNICAR — alto riesgo probable para los afectados
+[ ] NO COMUNICAR — excepción Art. 34.3 aplicable (especificar cuál)
+[ ] COMUNICACIÓN PÚBLICA — esfuerzo desproporcionado (Art. 34.3.c)
 
-**Research the currently operative response deadline for the specific right invoked and the applicable jurisdictions.** Check whether an extension mechanism exists, how much extra time it buys, and what notice the data subject must receive to invoke it. Identify when the clock starts (receipt vs. verification vs. some other trigger — default rule is receipt; verify per regime). Cite the controlling statute or regulation with pinpoint references. Note effective dates — data protection response timelines are amended frequently and new state laws introduce their own clocks.
+**Plazo:** "sin dilación indebida" — no hay plazo fijo en días pero
+la AEPD considera que debe realizarse lo antes posible tras confirmar
+la brecha y el alcance. [FUENTE: AEPD]
 
-If `~/.claude/plugins/config/claude-for-legal/privacy-legal/CLAUDE.md` → `## DSAR process` records an internal SLA that is tighter than the legal deadline, use the internal SLA and note the legal backstop.
+---
 
-If you're going to need an extension, send the "we need more time" notice well before the first deadline. Day-of extensions look bad.
+## PASO 5 — Formulario de notificación a la AEPD (borrador)
 
-## What this skill does not do
+Genera el borrador adaptado al formulario electrónico de la AEPD.
+[FUENTE: AEPD — sede electrónica notificación brechas: sedeagpd.gob.es]
+NOTIFICACIÓN DE BRECHA DE SEGURIDAD — ART. 33 RGPD
+Borrador para revisión letrada — NO ENVIAR sin validación
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+TIPO DE NOTIFICACIÓN:
+[ ] Notificación inicial (dentro de 72h)
+[ ] Notificación complementaria (información adicional posterior)
+[ ] Notificación extemporánea (fuera de plazo — justificación obligatoria)
+SECCIÓN 1 — IDENTIFICACIÓN DEL RESPONSABLE
+Nombre / Razón social:    [COMPLETAR — desde CLAUDE.md]
+NIF/CIF:                  [COMPLETAR]
+Dirección:                [COMPLETAR]
+DPD (si existe):          [COMPLETAR o "No designado"]
+Contacto notificación:    [COMPLETAR — nombre + email + teléfono]
+SECCIÓN 2 — DESCRIPCIÓN DE LA BRECHA
+Fecha y hora del incidente:         [DD/MM/AAAA HH:MM]
+Fecha y hora de detección:          [DD/MM/AAAA HH:MM]
+Fecha y hora de conocimiento
+por el responsable:                 [DD/MM/AAAA HH:MM]
+Tipo de brecha:                     [ ] Confidencialidad
+[ ] Integridad
+[ ] Disponibilidad
+Descripción del incidente:
+[Descripción clara y concisa de qué ocurrió, cómo se produjo y
+qué sistemas/datos se vieron afectados]
+SECCIÓN 3 — DATOS Y AFECTADOS
+Categorías de datos afectados:      [listar]
+Categorías especiales (Art. 9):     [ ] Sí → especificar: [...]
+[ ] No
+Número aproximado de afectados:     [número o rango]
+Número aproximado de registros:     [número o rango]
+Perfil de los afectados:            [ ] Clientes  [ ] Empleados
+[ ] Menores   [ ] Otros: [...]
+SECCIÓN 4 — CONSECUENCIAS PROBABLES
+[Descripción de las posibles consecuencias para los afectados:
+daño económico, discriminación, robo de identidad, daño reputacional,
+pérdida de confidencialidad, otros]
+SECCIÓN 5 — MEDIDAS ADOPTADAS
+Medidas de contención adoptadas:
+[Describir medidas técnicas y organizativas adoptadas o propuestas
+para abordar la brecha y mitigar sus posibles efectos adversos]
+Medidas para evitar recurrencia:
+[Describir]
+¿Los datos afectados estaban cifrados?  [ ] Sí  [ ] No  [ ] Parcialmente
+¿Se ha recuperado el acceso/control?    [ ] Sí  [ ] No  [ ] Parcialmente
+SECCIÓN 6 — COMUNICACIÓN A INTERESADOS
+¿Se ha comunicado o se comunicará a los afectados?
+[ ] Sí — fecha prevista: [DD/MM/AAAA]
+[ ] No — justificación (Art. 34.3 RGPD): [...]
+[ ] Comunicación pública (Art. 34.3.c)
+SECCIÓN 7 — OBSERVACIONES
+[Incluir aquí cualquier información relevante adicional.
+Si la notificación es extemporánea, incluir justificación detallada
+de la demora y medidas adoptadas durante el tiempo transcurrido]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  BORRADOR — Revisión letrada obligatoria antes de enviar
+La notificación se realiza a través de la sede electrónica de la AEPD:
+https://sedeagpd.gob.es → Trámites → Notificación de brechas
 
-- It doesn't query systems directly. It walks you through the checklist; a human (or a connected tool) does the actual queries.
-- It doesn't make exemption calls on close cases. It flags them for a lawyer.
-- It doesn't send the response. Draft, review, human sends.
+---
+
+## PASO 6 — Comunicación a interesados (si Art. 34 aplica)
+COMUNICACIÓN A INTERESADOS AFECTADOS
+Borrador para revisión letrada — NO ENVIAR sin validación
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+[Membrete del despacho]
+[Lugar], [DD/MM/AAAA]
+Asunto: Comunicación sobre incidente de seguridad que afecta
+a sus datos personales
+Estimado/a Sr./Sra. [Apellido] / Estimado/a cliente:
+Le comunicamos que [descripción del incidente en lenguaje claro
+y comprensible, sin tecnicismos innecesarios].
+Los datos que pueden haberse visto afectados son:
+[listar categorías de datos del interesado concreto o categorías
+generales si es comunicación masiva]
+Las posibles consecuencias para usted son:
+[descripción clara de los riesgos concretos]
+Las medidas que hemos adoptado son:
+[descripción de medidas de contención y mitigación]
+Le recomendamos que adopte las siguientes medidas de protección:
+[según el tipo de brecha: cambiar contraseñas, vigilar movimientos
+bancarios, estar alerta ante comunicaciones sospechosas, etc.]
+Para cualquier consulta o si desea más información, puede
+contactar con [nombre del DPD o contacto de privacidad] en
+[email] / [teléfono].
+Asimismo, tiene derecho a presentar una reclamación ante la
+Agencia Española de Protección de Datos (AEPD), con sede en
+calle Jorge Juan, 6, 28001 Madrid (www.aepd.es).
+[Nombre y firma del responsable]
+[Cargo] · [Despacho]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+⚠️  BORRADOR — Revisión letrada obligatoria antes de enviar
+
+---
+
+## PASO 7 — Registro interno de la brecha
+
+Genera el registro obligatorio ex Art. 33.5 RGPD — independientemente
+de si se notifica o no a la AEPD: [FUENTE: RGPD]
+REGISTRO DE BRECHAS DE SEGURIDAD — Art. 33.5 RGPD
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Ref.:                     BRECHA-[AÑO]-[NÚM]
+Fecha/hora incidente:     DD/MM/AAAA HH:MM
+Fecha/hora detección:     DD/MM/AAAA HH:MM
+Fecha/hora conocimiento
+por responsable:          DD/MM/AAAA HH:MM
+Tipo de brecha:           [Confidencialidad / Integridad / Disponibilidad]
+Descripción:              [resumen]
+Datos afectados:          [categorías]
+Categorías especiales:    [Sí/No — especificar]
+Nº afectados aprox.:      [número]
+Decisión notificación
+AEPD:                     [Notificada / No notificada — justificación]
+Fecha notificación AEPD:  DD/MM/AAAA HH:MM
+Nº expediente AEPD:       [si se dispone]
+Decisión comunicación
+a interesados:            [Sí / No — justificación / Pública]
+Fecha comunicación:       DD/MM/AAAA
+Medidas adoptadas:        [resumen]
+Revisión letrada:         [Nombre + fecha]
+Estado:                   [Abierta / Cerrada]
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+---
+
+## Guardrails obligatorios
+
+- **Nunca enviar el formulario AEPD directamente** — siempre revisión letrada
+  previa. El skill genera borradores, no envía.
+- **Siempre registrar la brecha** aunque la decisión sea no notificar —
+  el Art. 33.5 RGPD lo exige sin excepción. [FUENTE: RGPD]
+- **Advertir activamente del tiempo restante** en cada output — el plazo de
+  72h es el riesgo operativo más crítico de este skill.
+- **En caso de duda sobre si notificar: recomendar notificar** — una
+  notificación innecesaria tiene consecuencias menores que una omisión.
+  [FUENTE: AEPD]
+- **Notificación extemporánea es mejor que no notificar** — indicarlo
+  siempre si el plazo ha vencido.
+- Citar siempre con [FUENTE: RGPD], [FUENTE: AEPD], [FUENTE: BOE]
+  o [VERIFICAR].
+- No reproducir más datos personales de los afectados de los estrictamente
+  necesarios en el output.
