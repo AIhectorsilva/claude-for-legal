@@ -109,6 +109,14 @@
       "author": {
         "name": "Thomson Reuters"
       }
+    },
+    {
+      "name": "privacy-legal-es",
+      "source": "./privacy-legal-es",
+      "description": "Privacidad y protección de datos para el ordenamiento jurídico español. RGPD + LOPDGDD + AEPD. Triaje, EIPD, contratos encargado, respuesta ARSULIPO, notificación brechas, cláusulas RGPD.",
+      "author": {
+        "name": "Demalia"
+      }
     }
   ]
 }
