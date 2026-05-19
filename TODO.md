@@ -8,39 +8,20 @@
 
 ## 🔴 PRIORIDAD CRÍTICA
 
-### Contratos de encargado — Demalia Consulting (detectado en cold-start)
-El perfil de Demalia tiene 0 contratos Art. 28 firmados con ningún proveedor.
-Exposición real e inmediata.
-- [ ] HubSpot DPA — revisar con `/privacy-legal-es:revisor-dpa-encargado`
-- [ ] Google Workspace / Meet / Drive DPA — ídem
-- [ ] Slack DPA — ídem (datos bajo secreto profesional)
-- [ ] Brevo DPA — ídem
-- [ ] Holded DPA — ídem
-
-### Registro de Actividades de Tratamiento (RAT) — Art. 30 RGPD
-Demalia no tiene RAT. Obligatorio para cualquier responsable del tratamiento.
-- [ ] Crear RAT inicial para Demalia Consulting
-- [ ] Incorporar skill `generador-rat-es` al área LOPD en Sprint 2
-
-### Política de privacidad de Demalia
-No existe. Necesaria antes de cualquier actividad comercial web.
-- [ ] Generar con `/privacy-legal-es:generador-clausulas-rgpd`
-- [ ] Revisión letrada (Leo)
-- [ ] Publicar en web cuando esté lista
-
----
-
-## 🟠 PRIORIDAD ALTA
-
 ### Setup Enterprise Anthropic
+Sin esto no se puede firmar al primer cliente real — es el bloqueante técnico-legal número uno.
 - [ ] Solicitar acceso Enterprise a Anthropic
 - [ ] Firmar DPA (Data Processing Agreement) con Anthropic
       → Necesario para cumplir RGPD al tratar datos de clientes con la API
 - [ ] Activar Zero Data Retention (ZDR) en la cuenta
       → Sin ZDR, los inputs/outputs pueden usarse para entrenamiento
       → Crítico cuando los despachos suban documentos de clientes
-- [ ] Revisar los límites de rate y tokens en el plan Enterprise
+- [ ] Revisar límites de rate y tokens en el plan Enterprise
 - [ ] Actualizar stack técnico en PROYECTO.md con el plan definitivo
+
+---
+
+## 🟠 PRIORIDAD ALTA
 
 ### MCP conectores Sprint 2 — verificación normativa en tiempo real
 
@@ -162,6 +143,31 @@ No existe. Necesaria antes de cualquier actividad comercial web.
 
 ---
 
+## 📋 PENDIENTES LEGALES INTERNOS DEMALIA (no técnicos · cuando operativa real)
+
+> Detectados durante el cold-start de prueba con datos de Demalia.
+> No bloquean el desarrollo de Lexia. Abordar cuando empiece la operativa comercial real.
+
+### Contratos de encargado — Art. 28 RGPD
+El perfil de Demalia tiene 0 contratos Art. 28 firmados. Usar el propio
+`/privacy-legal-es:revisor-dpa-encargado` para revisarlos cuando toque.
+- [ ] HubSpot DPA
+- [ ] Google Workspace / Meet / Drive DPA
+- [ ] Slack DPA (datos bajo secreto profesional)
+- [ ] Brevo DPA
+- [ ] Holded DPA
+
+### Registro de Actividades de Tratamiento (RAT) — Art. 30 RGPD
+- [ ] Crear RAT inicial para Demalia Consulting
+      → Usar `generador-rat-es` cuando esté disponible (Sprint 2)
+
+### Política de privacidad de Demalia
+- [ ] Generar con `/privacy-legal-es:generador-clausulas-rgpd`
+- [ ] Revisión letrada (Leo)
+- [ ] Publicar en web cuando esté lista
+
+---
+
 ## ✅ Completado en Sprint 1
 
 - [x] Fork y setup de `claude-for-legal`
@@ -179,9 +185,10 @@ No existe. Necesaria antes de cualquier actividad comercial web.
 - [x] Perfil de Demalia Consulting generado y activo en disco
 - [x] `PROYECTO.md` — documentación maestra del proyecto
 - [x] `TODO.md` — este archivo
+- [x] `CHANGELOG.md` — registro de sesiones
 
 ---
 
 *Demalia Consulting · hector@demaliaconsulting.com*
 *Sprint 1 completado: 19/05/2026*
-*Sprint 2 objetivo: panel web + MCPs + Enterprise Anthropic*
+*Sprint 2 objetivo: Enterprise Anthropic + panel web + MCPs*
